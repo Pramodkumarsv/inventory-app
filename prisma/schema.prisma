@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Inward {
+  id           String   @id @default(uuid())
+  modelNo      String
+  productType  String
+  slNo         String?
+  qty          Int
+  from         String
+  remarks      String?
+  documentData String?  
+  date         DateTime @default(now())
+}
+
+model Outward {
+  id           String        @id @default(uuid())
+  customerName String
+  contactNo    String
+  address      String
+  projectName  String?
+  from         String
+  remarks      String?
+  date         DateTime      @default(now())
+  items        OutwardItem[]
+}
+
+model OutwardItem {
+  id          String   @id @default(uuid())
+  outwardId   String
+  outward     Outward  @relation(fields: [outwardId], references: [id])
+  modelNo     String
+  productType String
+  slNo        String?
+  qty         Int
+  unitValue   Float    @default(0)
+}
