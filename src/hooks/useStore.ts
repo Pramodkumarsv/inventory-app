@@ -17,6 +17,10 @@ export function useStore() {
     inwards,
     outwards,
     addInward: store.addInward,
+    updateInward: store.updateInward,
+    deleteInward: store.deleteInward,
     addOutward: store.addOutward,
+    updateOutward: store.updateOutward,
+    deleteOutward: store.deleteOutward,
   };
 }

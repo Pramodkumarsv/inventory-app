@@ -6,7 +6,10 @@ const prisma = new PrismaClient();
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
     try {
-      const inwards = await prisma.inward.findMany({ orderBy: { date: 'desc' } });
+      const inwards = await prisma.inward.findMany({ 
+        include: { items: true },
+        orderBy: { date: 'desc' } 
+      });
       return res.status(200).json(inwards);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch inwards' });
@@ -18,14 +21,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const data = req.body;
       const newInward = await prisma.inward.create({
         data: {
-          modelNo: data.modelNo,
-          productType: data.productType,
-          slNo: data.slNo,
-          qty: data.qty,
           from: data.from,
           remarks: data.remarks,
-          documentData: data.documentData
-        }
+          documentData: data.documentData,
+          items: {
+            create: data.items.map((item: any) => ({
+              modelNo: item.modelNo,
+              productType: item.productType,
+              slNo: item.slNo,
+              qty: item.qty
+            }))
+          }
+        },
+        include: { items: true }
       });
       return res.status(201).json(newInward);
     } catch (error) {

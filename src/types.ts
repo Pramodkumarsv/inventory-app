@@ -1,13 +1,18 @@
-export interface InwardRecord {
+export interface InwardItem {
   id: string;
   modelNo: string;
   productType: string;
   slNo: string;
   qty: number;
+}
+
+export interface InwardRecord {
+  id: string;
   from: string;
   remarks: string;
   date: string;
   documentData?: string; // Base64 string of the uploaded document
+  items: InwardItem[];
 }
 
 export interface OutwardItem {

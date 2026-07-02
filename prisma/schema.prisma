@@ -8,15 +8,22 @@ datasource db {
 }
 
 model Inward {
-  id           String   @id @default(uuid())
-  modelNo      String
-  productType  String
-  slNo         String?
-  qty          Int
+  id           String       @id @default(uuid())
   from         String
   remarks      String?
   documentData String?  
-  date         DateTime @default(now())
+  date         DateTime     @default(now())
+  items        InwardItem[]
+}
+
+model InwardItem {
+  id          String   @id @default(uuid())
+  inwardId    String
+  inward      Inward   @relation(fields: [inwardId], references: [id])
+  modelNo     String
+  productType String
+  slNo        String?
+  qty         Int
 }
 
 model Outward {
