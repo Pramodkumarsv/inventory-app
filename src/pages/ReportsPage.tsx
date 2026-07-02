@@ -1,9 +1,9 @@
 import { useState, useMemo, useRef } from 'react';
 import { useStore } from '../hooks/useStore';
-import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 
 export function ReportsPage() {
-  const { inwards, outwards, addInward, deleteOutward, deleteInward } = useStore();
+  const { inwards, outwards, addInward, deleteOutward } = useStore();
   const [searchModel, setSearchModel] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
@@ -58,56 +58,53 @@ export function ReportsPage() {
     return flattened;
   }, [outwards, searchModel]);
 
-  const exportCSV = () => {
+  const exportExcel = () => {
     const data = availableByModel.map(item => ({
       'Model No': item.modelNo,
       'Product Type': item.productType,
       'Available Quantity': item.availableQty
     }));
     
-    const csv = Papa.unparse(data);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Inventory_Export_${new Date().toISOString()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Inventory");
+    XLSX.writeFile(workbook, `Inventory_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: function(results) {
-        const rows = results.data as any[];
-        
-        // Convert rows to Inward Items
-        const newItems = rows.map(row => ({
-          modelNo: row['Model No'] || row['modelNo'],
-          productType: row['Product Type'] || row['productType'] || 'Imported',
-          slNo: row['Serial No'] || row['slNo'] || '',
-          qty: parseInt(row['Quantity'] || row['qty']) || 1
-        })).filter(i => i.modelNo);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const bstr = evt.target?.result;
+      const workbook = XLSX.read(bstr, { type: 'binary' });
+      const wsname = workbook.SheetNames[0];
+      const ws = workbook.Sheets[wsname];
+      const data = XLSX.utils.sheet_to_json(ws) as any[];
 
-        if (newItems.length > 0) {
-          addInward({
-            from: 'CSV Import',
-            remarks: 'Bulk imported stock',
-            items: newItems
-          } as any);
-          alert(`Successfully imported ${newItems.length} items!`);
-        } else {
-          alert('No valid items found in CSV. Please ensure columns match: Model No, Product Type, Quantity');
-        }
-        
-        if (fileInputRef.current) fileInputRef.current.value = '';
+      // Convert rows to Inward Items
+      const newItems = data.map(row => ({
+        modelNo: row['Model No'] || row['modelNo'] || row['Model'],
+        productType: row['Product Type'] || row['productType'] || row['Product'] || 'Imported',
+        slNo: row['Serial No'] || row['slNo'] || row['Serial'] || '',
+        qty: parseInt(row['Quantity'] || row['qty'] || row['Qty']) || 1
+      })).filter(i => i.modelNo);
+
+      if (newItems.length > 0) {
+        addInward({
+          from: 'Excel Import',
+          remarks: 'Bulk imported stock from Excel',
+          items: newItems
+        } as any);
+        alert(`Successfully imported ${newItems.length} items!`);
+      } else {
+        alert('No valid items found in Excel. Please ensure columns match: Model No, Product Type, Quantity');
       }
-    });
+      
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    reader.readAsBinaryString(file);
   };
 
   const handleDeleteOutward = (id: string) => {
@@ -143,13 +140,13 @@ export function ReportsPage() {
         <div>
           <h2 className="page-title" style={{ marginBottom: '0.5rem' }}>Dashboard Overview</h2>
           <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-            <button onClick={exportCSV} className="btn btn-primary" style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}>
-              ⬇️ Export CSV
+            <button onClick={exportExcel} className="btn btn-primary" style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>⬇️</span> Export Excel
             </button>
-            <button onClick={() => fileInputRef.current?.click()} className="btn btn-secondary" style={{ backgroundColor: 'var(--border)', color: 'white', fontSize: '0.875rem', padding: '0.5rem 1rem' }}>
-              ⬆️ Import CSV
+            <button onClick={() => fileInputRef.current?.click()} className="btn btn-secondary" style={{ backgroundColor: 'var(--secondary)', color: 'white', fontSize: '0.875rem', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>⬆️</span> Import Excel
             </button>
-            <input type="file" ref={fileInputRef} onChange={handleImport} accept=".csv" style={{ display: 'none' }} />
+            <input type="file" ref={fileInputRef} onChange={handleImport} accept=".xlsx, .xls" style={{ display: 'none' }} />
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
