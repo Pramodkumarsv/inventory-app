@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx';
 
 export function ReportsPage() {
   const { inwards, outwards, addInward, deleteOutward } = useStore();
-  const [searchModel, setSearchModel] = useState('');
+  const [globalSearch, setGlobalSearch] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
 
@@ -38,9 +38,15 @@ export function ReportsPage() {
 
   const filteredOutwards = useMemo(() => {
     const flattened: any[] = [];
+    const searchLower = globalSearch.toLowerCase();
     outwards.forEach(o => {
       (o.items || []).forEach(item => {
-        if (!searchModel.trim() || item.modelNo.toLowerCase().includes(searchModel.toLowerCase())) {
+        if (!globalSearch.trim() || 
+            item.modelNo.toLowerCase().includes(searchLower) ||
+            o.customerName.toLowerCase().includes(searchLower) ||
+            (o.projectName && o.projectName.toLowerCase().includes(searchLower)) ||
+            o.from.toLowerCase().includes(searchLower)
+           ) {
           flattened.push({
             id: o.id + '-' + item.id,
             parentId: o.id,
@@ -56,7 +62,16 @@ export function ReportsPage() {
       });
     });
     return flattened;
-  }, [outwards, searchModel]);
+  }, [outwards, globalSearch]);
+
+  const filteredAvailable = useMemo(() => {
+    const searchLower = globalSearch.toLowerCase();
+    return availableByModel.filter(item => 
+      !globalSearch.trim() || 
+      item.modelNo.toLowerCase().includes(searchLower) || 
+      item.productType.toLowerCase().includes(searchLower)
+    );
+  }, [availableByModel, globalSearch]);
 
   const exportExcel = () => {
     const data = availableByModel.map(item => ({
@@ -136,6 +151,17 @@ export function ReportsPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       
+      <div className="card" style={{ padding: '1.5rem' }}>
+        <input 
+          type="text" 
+          placeholder="Global Search (Model No, Product Type, Customer, Project, Location)..." 
+          className="form-input" 
+          value={globalSearch}
+          onChange={e => setGlobalSearch(e.target.value)}
+          style={{ fontSize: '1.125rem', padding: '1rem', width: '100%', borderColor: 'var(--primary)' }}
+        />
+      </div>
+
       <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <h2 className="page-title" style={{ marginBottom: '0.5rem' }}>Dashboard Overview</h2>
@@ -170,12 +196,12 @@ export function ReportsPage() {
               </tr>
             </thead>
             <tbody>
-              {availableByModel.length === 0 ? (
+              {filteredAvailable.length === 0 ? (
                 <tr>
-                  <td colSpan={3} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No inventory data available.</td>
+                  <td colSpan={3} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No inventory matches your search.</td>
                 </tr>
               ) : (
-                availableByModel.map(item => (
+                filteredAvailable.map(item => (
                   <tr key={item.modelNo}>
                     <td>
                       <button 
@@ -198,15 +224,6 @@ export function ReportsPage() {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <h3 style={{ fontSize: '1.25rem', fontWeight: '600' }}>Outward Details</h3>
-          <div style={{ width: '300px' }}>
-            <input 
-              type="text" 
-              placeholder="Search by Model No..." 
-              className="form-input" 
-              value={searchModel}
-              onChange={e => setSearchModel(e.target.value)}
-            />
-          </div>
         </div>
         <div className="table-container">
           <table>
