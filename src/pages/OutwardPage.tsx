@@ -7,6 +7,10 @@ import type { OutwardRecord, OutwardItem } from '../types';
 export function OutwardPage() {
   const { addOutward, inwards, outwards } = useStore();
   
+  const uniqueModels = Array.from(new Set(
+    inwards.flatMap(i => (i.items || []).map(item => item.modelNo))
+  ));
+  
   const [formData, setFormData] = useState({
     customerName: '',
     contactNo: '',
@@ -148,10 +152,12 @@ export function OutwardPage() {
         alert('Please fill out Model No for all items');
         return;
       }
+      
+      const isKnownModel = uniqueModels.includes(item.modelNo);
       const avail = getAvailableQty(item.modelNo);
-      // Wait, we need to check if they added the same model multiple times in the form!
       const qtyInForm = items.filter(i => i.modelNo === item.modelNo).reduce((acc, curr) => acc + curr.qty, 0);
-      if (qtyInForm > avail) {
+      
+      if (isKnownModel && qtyInForm > avail) {
         alert(`Cannot dispatch ${qtyInForm} of ${item.modelNo}. Only ${avail} available.`);
         return;
       }
@@ -229,9 +235,15 @@ export function OutwardPage() {
             <div className="grid grid-cols-2" style={{ marginTop: '0.5rem' }}>
               <div className="form-group">
                 <label className="form-label">Model No</label>
-                <input required type="text" name="modelNo" className="form-input" value={item.modelNo} onChange={(e) => handleItemChange(index, e)} />
-                {item.modelNo && (
+                <input required list="model-options" type="text" name="modelNo" className="form-input" value={item.modelNo} onChange={(e) => handleItemChange(index, e)} />
+                <datalist id="model-options">
+                  {uniqueModels.map(m => <option key={m} value={m} />)}
+                </datalist>
+                {item.modelNo && uniqueModels.includes(item.modelNo) && (
                    <small style={{ color: 'var(--secondary)', marginTop: '0.25rem', display: 'block' }}>Available: {getAvailableQty(item.modelNo)}</small>
+                )}
+                {item.modelNo && !uniqueModels.includes(item.modelNo) && (
+                   <small style={{ color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>New item (No stock check)</small>
                 )}
               </div>
               <div className="form-group">
