@@ -27,7 +27,12 @@ export function OutwardPage() {
   const getAvailableQty = (modelNo: string) => {
     if (!modelNo) return 0;
     
-    const inwardQty = inwards.filter(i => i.modelNo === modelNo).reduce((acc, curr) => acc + curr.qty, 0);
+    let inwardQty = 0;
+    inwards.forEach(i => {
+      (i.items || []).forEach(item => {
+        if (item.modelNo === modelNo) inwardQty += item.qty;
+      });
+    });
     
     // Count qty already dispatched in past outward records
     let outwardQty = 0;
@@ -50,10 +55,20 @@ export function OutwardPage() {
   const handleItemChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const newItems = [...items];
+    
     newItems[index] = {
       ...newItems[index],
       [name]: (name === 'qty' || name === 'unitValue') ? parseFloat(value) || 0 : value
     };
+
+    // Auto-populate Product Type if Model No matches an existing inward record
+    if (name === 'modelNo') {
+      const existingItem = inwards.flatMap(i => i.items || []).find(i => i.modelNo === value);
+      if (existingItem) {
+        newItems[index].productType = existingItem.productType;
+      }
+    }
+
     setItems(newItems);
   };
 
