@@ -61,11 +61,14 @@ export function OutwardPage() {
       [name]: (name === 'qty' || name === 'unitValue') ? parseFloat(value) || 0 : value
     };
 
-    // Auto-populate Product Type if Model No matches an existing inward record
+    // Auto-populate Product Type and Serial No if Model No matches an existing inward record
     if (name === 'modelNo') {
       const existingItem = inwards.flatMap(i => i.items || []).find(i => i.modelNo === value);
       if (existingItem) {
         newItems[index].productType = existingItem.productType;
+        if (existingItem.slNo) {
+          newItems[index].slNo = existingItem.slNo;
+        }
       }
     }
 
