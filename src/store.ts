@@ -1,4 +1,4 @@
-import type { InwardRecord, OutwardRecord, OutwardItem } from './types';
+import type { InwardRecord, OutwardRecord } from './types';
 
 // Simple pub/sub for React to subscribe to store changes
 type Listener = () => void;

@@ -1,16 +1,22 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useStore } from '../hooks/useStore';
-import type { InwardRecord, InwardItem } from '../types';
+import type { InwardItem } from '../types';
+import { supabase } from '../lib/supabase';
 
 export function InwardPage() {
   const { addInward } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   const [formData, setFormData] = useState({
     from: '',
     remarks: '',
-    documentData: ''
   });
 
   const [items, setItems] = useState<Omit<InwardItem, 'id'>[]>([
@@ -21,18 +27,56 @@ export function InwardPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    if (file.size > 2 * 1024 * 1024) {
-      alert("File is too large! Please upload a file smaller than 2MB.");
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File is too large! Please upload a file smaller than 5MB.");
       if (fileInputRef.current) fileInputRef.current.value = '';
-      if (cameraInputRef.current) cameraInputRef.current.value = '';
       return;
     }
+    setSelectedFile(file);
+  };
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setFormData(prev => ({ ...prev, documentData: event.target?.result as string }));
-    };
-    reader.readAsDataURL(file);
+  const startCamera = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      setStream(mediaStream);
+      setIsCameraOpen(true);
+    } catch (err) {
+      alert("Could not access camera. Please allow camera permissions.");
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    if (isCameraOpen && videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [isCameraOpen, stream]);
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
+    setIsCameraOpen(false);
+    setStream(null);
+  };
+
+  const takeSnapshot = () => {
+    if (videoRef.current && canvasRef.current) {
+      const context = canvasRef.current.getContext('2d');
+      if (context) {
+        canvasRef.current.width = videoRef.current.videoWidth;
+        canvasRef.current.height = videoRef.current.videoHeight;
+        context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
+        
+        canvasRef.current.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            setSelectedFile(file);
+            stopCamera();
+          }
+        }, 'image/jpeg', 0.8);
+      }
+    }
   };
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -60,8 +104,9 @@ export function InwardPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     for (const item of items) {
       if (!item.modelNo) {
@@ -70,30 +115,59 @@ export function InwardPage() {
       }
     }
 
-    const recordToSave = {
-      ...formData,
-      items: items as InwardItem[]
-    };
+    setIsSubmitting(true);
+    let documentUrl = '';
 
-    addInward(recordToSave as any);
+    try {
+      if (selectedFile) {
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
 
-    // Reset
-    setFormData({
-      from: '',
-      remarks: '',
-      documentData: ''
-    });
-    setItems([{ modelNo: '', productType: '', slNo: '', qty: 1 }]);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    if (cameraInputRef.current) cameraInputRef.current.value = '';
-    
-    alert('Inward entry added successfully!');
+        const { error: uploadError } = await supabase.storage
+          .from('inventory')
+          .upload(filePath, selectedFile);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+        
+        const { data: publicUrlData } = supabase.storage
+          .from('inventory')
+          .getPublicUrl(filePath);
+          
+        documentUrl = publicUrlData.publicUrl;
+      }
+
+      const recordToSave = {
+        ...formData,
+        documentData: documentUrl,
+        items: items as InwardItem[]
+      };
+
+      addInward(recordToSave as any);
+
+      // Reset
+      setFormData({
+        from: '',
+        remarks: '',
+      });
+      setSelectedFile(null);
+      setItems([{ modelNo: '', productType: '', slNo: '', qty: 1 }]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      
+      alert('Inward entry added successfully!');
+    } catch (error: any) {
+      alert(`Error uploading file: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="card">
       <h1 className="page-title">Inward Entry</h1>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} autoComplete="off">
         
         <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--primary)' }}>Receipt Details</h2>
         <div className="grid grid-cols-2" style={{ marginBottom: '2rem' }}>
@@ -104,28 +178,57 @@ export function InwardPage() {
           <div className="form-group">
             <label className="form-label">Document (Upload or Photo)</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-              <button 
-                type="button" 
-                className="btn btn-secondary" 
-                onClick={() => cameraInputRef.current?.click()}
-                style={{ backgroundColor: 'var(--border)', color: 'white', flex: 1 }}
-              >
-                📷 Take Photo
-              </button>
-              <button 
-                type="button" 
-                className="btn btn-secondary" 
-                onClick={() => fileInputRef.current?.click()}
-                style={{ backgroundColor: 'var(--border)', color: 'white', flex: 1 }}
-              >
-                📁 Upload File
-              </button>
+              {!isCameraOpen ? (
+                <>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    onClick={startCamera}
+                    style={{ backgroundColor: 'var(--border)', color: 'white', flex: 1 }}
+                    disabled={isSubmitting}
+                  >
+                    📷 Take Photo
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{ backgroundColor: 'var(--border)', color: 'white', flex: 1 }}
+                    disabled={isSubmitting}
+                  >
+                    📁 Upload File
+                  </button>
+                </>
+              ) : (
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={stopCamera}
+                  style={{ backgroundColor: 'var(--danger)', color: 'white', flex: 1 }}
+                >
+                  Cancel Camera
+                </button>
+              )}
               
-              <input type="file" ref={cameraInputRef} onChange={handleFileChange} accept="image/*" capture="environment" style={{ display: 'none' }} />
               <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".pdf,image/*" style={{ display: 'none' }} />
             </div>
-            {formData.documentData && (
-              <small style={{ color: 'var(--secondary)', display: 'block', marginTop: '0.5rem' }}>Document attached successfully.</small>
+
+            {isCameraOpen && (
+              <div style={{ marginTop: '1rem', position: 'relative', borderRadius: '0.5rem', overflow: 'hidden', border: '2px solid var(--primary)' }}>
+                <video ref={videoRef} autoPlay playsInline style={{ width: '100%', display: 'block' }}></video>
+                <canvas ref={canvasRef} style={{ display: 'none' }}></canvas>
+                <button 
+                  type="button" 
+                  onClick={takeSnapshot}
+                  style={{ position: 'absolute', bottom: '1rem', left: '50%', transform: 'translateX(-50%)', padding: '0.75rem 1.5rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '2rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}
+                >
+                  📸 Snap Picture
+                </button>
+              </div>
+            )}
+
+            {selectedFile && !isCameraOpen && (
+              <small style={{ color: 'var(--secondary)', display: 'block', marginTop: '0.5rem' }}>Selected: {selectedFile.name}</small>
             )}
           </div>
         </div>
@@ -151,19 +254,19 @@ export function InwardPage() {
             <div className="grid grid-cols-2" style={{ marginTop: '0.5rem' }}>
               <div className="form-group">
                 <label className="form-label">Model No</label>
-                <input required type="text" name="modelNo" className="form-input" value={item.modelNo} onChange={(e) => handleItemChange(index, e)} />
+                <input required type="text" name="modelNo" className="form-input" value={item.modelNo} onChange={(e) => handleItemChange(index, e)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }} />
               </div>
               <div className="form-group">
                 <label className="form-label">Product Type</label>
-                <input required type="text" name="productType" className="form-input" value={item.productType} onChange={(e) => handleItemChange(index, e)} />
+                <input required type="text" name="productType" className="form-input" value={item.productType} onChange={(e) => handleItemChange(index, e)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }} />
               </div>
               <div className="form-group">
                 <label className="form-label">Serial Number (Sl no)</label>
-                <input type="text" name="slNo" className="form-input" value={item.slNo} onChange={(e) => handleItemChange(index, e)} />
+                <input type="text" name="slNo" className="form-input" value={item.slNo} onChange={(e) => handleItemChange(index, e)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }} />
               </div>
               <div className="form-group">
                 <label className="form-label">Quantity</label>
-                <input required type="number" min="1" name="qty" className="form-input" value={item.qty} onChange={(e) => handleItemChange(index, e)} />
+                <input required type="number" min="1" name="qty" className="form-input" value={item.qty} onChange={(e) => handleItemChange(index, e)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }} />
               </div>
             </div>
           </div>
@@ -174,8 +277,8 @@ export function InwardPage() {
           <textarea name="remarks" className="form-input" rows={2} value={formData.remarks} onChange={handleFormChange}></textarea>
         </div>
 
-        <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.125rem' }}>
-          Save Inward Entry
+        <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.125rem' }} disabled={isSubmitting}>
+          {isSubmitting ? 'Uploading & Saving...' : 'Save Inward Entry'}
         </button>
       </form>
     </div>

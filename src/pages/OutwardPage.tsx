@@ -206,7 +206,7 @@ export function OutwardPage() {
   return (
     <div className="card">
       <h1 className="page-title">Outward Entry (Multi-Item)</h1>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} autoComplete="off">
         
         <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--primary)' }}>Consignee Details</h2>
         <div className="grid grid-cols-2" style={{ marginBottom: '2rem' }}>
@@ -253,7 +253,7 @@ export function OutwardPage() {
             <div className="grid grid-cols-2" style={{ marginTop: '0.5rem' }}>
               <div className="form-group">
                 <label className="form-label">Model No</label>
-                <input required list="model-options" type="text" name="modelNo" className="form-input" value={item.modelNo} onChange={(e) => handleItemChange(index, e)} />
+                <input required list="model-options" type="text" name="modelNo" className="form-input" value={item.modelNo} onChange={(e) => handleItemChange(index, e)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }} />
                 <datalist id="model-options">
                   {uniqueModels.map(m => <option key={m} value={m} />)}
                 </datalist>
@@ -266,20 +266,20 @@ export function OutwardPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Product Type</label>
-                <input required type="text" name="productType" className="form-input" value={item.productType} onChange={(e) => handleItemChange(index, e)} />
+                <input required type="text" name="productType" className="form-input" value={item.productType} onChange={(e) => handleItemChange(index, e)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }} />
               </div>
               <div className="form-group">
                 <label className="form-label">Serial Number (Sl no)</label>
-                <input type="text" name="slNo" className="form-input" value={item.slNo} onChange={(e) => handleItemChange(index, e)} />
+                <input type="text" name="slNo" className="form-input" value={item.slNo} onChange={(e) => handleItemChange(index, e)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }} />
               </div>
               <div className="form-group" style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 1 }}>
                   <label className="form-label">Quantity</label>
-                  <input required type="number" min="1" name="qty" className="form-input" value={item.qty} onChange={(e) => handleItemChange(index, e)} />
+                  <input required type="number" min="1" name="qty" className="form-input" value={item.qty} onChange={(e) => handleItemChange(index, e)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label className="form-label">Unit Value (INR)</label>
-                  <input required type="number" min="0" name="unitValue" className="form-input" value={item.unitValue} onChange={(e) => handleItemChange(index, e)} />
+                  <input required type="number" min="0" name="unitValue" className="form-input" value={item.unitValue} onChange={(e) => handleItemChange(index, e)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }} />
                 </div>
               </div>
             </div>

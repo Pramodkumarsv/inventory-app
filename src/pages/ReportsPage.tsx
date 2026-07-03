@@ -3,10 +3,21 @@ import { useStore } from '../hooks/useStore';
 import * as XLSX from 'xlsx';
 
 export function ReportsPage() {
-  const { inwards, outwards, addInward, deleteOutward } = useStore();
+  const { inwards, outwards, addInward, deleteOutward, deleteInward } = useStore();
   const [globalSearch, setGlobalSearch] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<{ type: 'INWARD' | 'OUTWARD', data: any } | null>(null);
+
+  const filteredInwards = useMemo(() => {
+    const searchLower = globalSearch.toLowerCase();
+    return inwards.filter(i => 
+      !globalSearch.trim() || 
+      i.from.toLowerCase().includes(searchLower) ||
+      (i.remarks && i.remarks.toLowerCase().includes(searchLower)) ||
+      (i.items || []).some(item => item.modelNo.toLowerCase().includes(searchLower))
+    );
+  }, [inwards, globalSearch]);
 
   // Calculate available qty by model no
   const availableByModel = useMemo(() => {
@@ -36,33 +47,7 @@ export function ReportsPage() {
     return availableByModel.reduce((acc, curr) => acc + curr.availableQty, 0);
   }, [availableByModel]);
 
-  const filteredOutwards = useMemo(() => {
-    const flattened: any[] = [];
-    const searchLower = globalSearch.toLowerCase();
-    outwards.forEach(o => {
-      (o.items || []).forEach(item => {
-        if (!globalSearch.trim() || 
-            item.modelNo.toLowerCase().includes(searchLower) ||
-            o.customerName.toLowerCase().includes(searchLower) ||
-            (o.projectName && o.projectName.toLowerCase().includes(searchLower)) ||
-            o.from.toLowerCase().includes(searchLower)
-           ) {
-          flattened.push({
-            id: o.id + '-' + item.id,
-            parentId: o.id,
-            date: o.date,
-            customerName: o.customerName,
-            projectName: o.projectName,
-            modelNo: item.modelNo,
-            qty: item.qty,
-            from: o.from,
-            unitValue: item.unitValue
-          });
-        }
-      });
-    });
-    return flattened;
-  }, [outwards, globalSearch]);
+
 
   const filteredAvailable = useMemo(() => {
     const searchLower = globalSearch.toLowerCase();
@@ -134,18 +119,25 @@ export function ReportsPage() {
     inwards.forEach(i => {
       (i.items || []).forEach(item => {
         if (item.modelNo === modelNo) {
-          history.push({ type: 'INWARD', date: i.date, qty: item.qty, fromTo: i.from });
+          history.push({ type: 'INWARD', date: i.date, qty: item.qty, fromTo: i.from, id: i.id });
         }
       });
     });
     outwards.forEach(o => {
       (o.items || []).forEach(item => {
         if (item.modelNo === modelNo) {
-          history.push({ type: 'OUTWARD', date: o.date, qty: item.qty, fromTo: o.customerName });
+          history.push({ type: 'OUTWARD', date: o.date, qty: item.qty, fromTo: o.customerName, id: o.id });
         }
       });
     });
     return history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  };
+
+  const handleDeleteInward = (id: string) => {
+    if(confirm("Are you sure you want to delete this INWARD record? This will delete all items in it.")) {
+      deleteInward(id);
+      setSelectedItem(null);
+    }
   };
 
   return (
@@ -222,8 +214,49 @@ export function ReportsPage() {
       </div>
 
       <div className="card">
+        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: '600' }}>Recent Inward Records</h3>
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>From (Vendor)</th>
+                <th>Total Items</th>
+                <th>Remarks</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredInwards.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No inward records found.</td>
+                </tr>
+              ) : (
+                filteredInwards.map(i => (
+                  <tr key={i.id} style={{ cursor: 'pointer' }} onClick={() => setSelectedRecord({ type: 'INWARD', data: i })}>
+                    <td>{new Date(i.date).toLocaleDateString()}</td>
+                    <td style={{ fontWeight: '500' }}>{i.from}</td>
+                    <td>{(i.items || []).reduce((acc, curr) => acc + curr.qty, 0)}</td>
+                    <td>{i.remarks || '-'}</td>
+                    <td>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDeleteInward(i.id); }} 
+                        style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.875rem' }}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '600' }}>Outward Details</h3>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '600' }}>Recent Outward Records</h3>
         </div>
         <div className="table-container">
           <table>
@@ -232,29 +265,32 @@ export function ReportsPage() {
                 <th>Date</th>
                 <th>Customer Name</th>
                 <th>Project</th>
-                <th>Model No</th>
-                <th>Qty</th>
-                <th>Unit Value</th>
+                <th>Total Items</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredOutwards.length === 0 ? (
+              {outwards.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No outward records found.</td>
+                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No outward records found.</td>
                 </tr>
               ) : (
-                filteredOutwards.map(o => (
-                  <tr key={o.id}>
+                outwards.filter(o => 
+                  !globalSearch.trim() || 
+                  o.customerName.toLowerCase().includes(globalSearch.toLowerCase()) || 
+                  (o.projectName && o.projectName.toLowerCase().includes(globalSearch.toLowerCase()))
+                ).map(o => (
+                  <tr key={o.id} style={{ cursor: 'pointer' }} onClick={() => setSelectedRecord({ type: 'OUTWARD', data: o })}>
                     <td>{new Date(o.date).toLocaleDateString()}</td>
-                    <td>{o.customerName}</td>
+                    <td style={{ fontWeight: '500' }}>{o.customerName}</td>
                     <td>{o.projectName || '-'}</td>
-                    <td style={{ fontWeight: '500' }}>{o.modelNo}</td>
-                    <td>{o.qty}</td>
-                    <td>{o.unitValue}</td>
+                    <td>{(o.items || []).reduce((acc, curr) => acc + curr.qty, 0)}</td>
                     <td>
-                      <button onClick={() => handleDeleteOutward(o.parentId)} style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.875rem' }}>
-                        Delete Transaction
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDeleteOutward(o.id); }} 
+                        style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.875rem' }}
+                      >
+                        Delete
                       </button>
                     </td>
                   </tr>
@@ -282,6 +318,7 @@ export function ReportsPage() {
                     <th>Type</th>
                     <th>Qty</th>
                     <th>Location / Customer</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -291,10 +328,116 @@ export function ReportsPage() {
                       <td style={{ color: entry.type === 'INWARD' ? 'var(--secondary)' : 'var(--danger)', fontWeight: 'bold' }}>{entry.type}</td>
                       <td>{entry.qty}</td>
                       <td>{entry.fromTo}</td>
+                      <td>
+                        <button 
+                          onClick={() => entry.type === 'INWARD' ? handleDeleteInward(entry.id) : handleDeleteOutward(entry.id)} 
+                          style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline' }}
+                        >
+                          Delete Record
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full Details Modal for Inward/Outward Records */}
+      {selectedRecord && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '1rem' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)' }}>
+                {selectedRecord.type === 'INWARD' ? 'Inward Receipt Details' : 'Outward Invoice Details'}
+              </h2>
+              <button onClick={() => setSelectedRecord(null)} style={{ background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-muted)' }}>×</button>
+            </div>
+            
+            <div className="grid grid-cols-2" style={{ marginBottom: '2rem', gap: '1rem' }}>
+              <div>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Date</p>
+                <p style={{ fontWeight: '500' }}>{new Date(selectedRecord.data.date).toLocaleDateString()}</p>
+              </div>
+              {selectedRecord.type === 'INWARD' ? (
+                <>
+                  <div>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>From (Vendor)</p>
+                    <p style={{ fontWeight: '500' }}>{selectedRecord.data.from}</p>
+                  </div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Remarks</p>
+                    <p style={{ fontWeight: '500' }}>{selectedRecord.data.remarks || '-'}</p>
+                  </div>
+                  {selectedRecord.data.documentData && (
+                    <div style={{ gridColumn: 'span 2', marginTop: '1rem' }}>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Captured Photo / Document</p>
+                      <a href={selectedRecord.data.documentData} target="_blank" rel="noreferrer">
+                        <img src={selectedRecord.data.documentData} alt="Document" style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '0.5rem', border: '1px solid var(--border)' }} />
+                      </a>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Customer Name</p>
+                    <p style={{ fontWeight: '500' }}>{selectedRecord.data.customerName}</p>
+                  </div>
+                  <div>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Contact No</p>
+                    <p style={{ fontWeight: '500' }}>{selectedRecord.data.contactNo}</p>
+                  </div>
+                  <div>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Project Name</p>
+                    <p style={{ fontWeight: '500' }}>{selectedRecord.data.projectName || '-'}</p>
+                  </div>
+                  <div>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Dispatched From</p>
+                    <p style={{ fontWeight: '500' }}>{selectedRecord.data.from}</p>
+                  </div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Address</p>
+                    <p style={{ fontWeight: '500' }}>{selectedRecord.data.address}</p>
+                  </div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Remarks</p>
+                    <p style={{ fontWeight: '500' }}>{selectedRecord.data.remarks || '-'}</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>Items Scanned</h3>
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Model No</th>
+                    <th>Product Type</th>
+                    <th>Serial No</th>
+                    <th>Qty</th>
+                    <th>Unit Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(selectedRecord.data.items || []).map((item: any, idx: number) => (
+                    <tr key={idx}>
+                      <td style={{ fontWeight: '500' }}>{item.modelNo}</td>
+                      <td>{item.productType}</td>
+                      <td>{item.slNo || '-'}</td>
+                      <td>{item.qty}</td>
+                      <td>{item.unitValue || 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setSelectedRecord(null)} className="btn btn-secondary">Close Details</button>
             </div>
           </div>
         </div>

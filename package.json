@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "prisma generate && tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
     "@prisma/client": "^7.8.0",
+    "@supabase/supabase-js": "^2.110.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "prisma": "^7.8.0",
@@ -23,6 +24,7 @@
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@vercel/node": "^5.8.22",
     "@vitejs/plugin-react": "^6.0.3",
     "oxlint": "^1.71.0",
     "typescript": "~6.0.2",
