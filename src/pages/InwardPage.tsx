@@ -184,7 +184,7 @@ export function InwardPage() {
                     type="button" 
                     className="btn btn-secondary" 
                     onClick={startCamera}
-                    style={{ backgroundColor: 'var(--border)', color: 'white', flex: 1 }}
+                    style={{ flex: 1 }}
                     disabled={isSubmitting}
                   >
                     📷 Take Photo
@@ -193,7 +193,7 @@ export function InwardPage() {
                     type="button" 
                     className="btn btn-secondary" 
                     onClick={() => fileInputRef.current?.click()}
-                    style={{ backgroundColor: 'var(--border)', color: 'white', flex: 1 }}
+                    style={{ flex: 1 }}
                     disabled={isSubmitting}
                   >
                     📁 Upload File

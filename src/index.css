@@ -35,6 +35,8 @@
   --text-main: #0f172a;
   --text-muted: #64748b;
   --border: rgba(0, 0, 0, 0.08);
+  --secondary: #059669; /* Darker green for legibility */
+  --danger: #dc2626; /* Darker red for legibility */
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.1);
