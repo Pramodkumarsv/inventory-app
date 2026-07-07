@@ -18,7 +18,7 @@ model Inward {
 model InwardItem {
   id          String   @id @default(uuid())
   inwardId    String
-  inward      Inward   @relation(fields: [inwardId], references: [id])
+  inward      Inward   @relation(fields: [inwardId], references: [id], onDelete: Cascade)
   modelNo     String
   productType String
   slNo        String?
@@ -40,7 +40,7 @@ model Outward {
 model OutwardItem {
   id          String   @id @default(uuid())
   outwardId   String
-  outward     Outward  @relation(fields: [outwardId], references: [id])
+  outward     Outward  @relation(fields: [outwardId], references: [id], onDelete: Cascade)
   modelNo     String
   productType String
   slNo        String?
