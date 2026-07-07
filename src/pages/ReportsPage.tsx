@@ -223,13 +223,14 @@ export function ReportsPage() {
                 <th>From (Vendor)</th>
                 <th>Total Items</th>
                 <th>Remarks</th>
+                <th>Document</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredInwards.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No inward records found.</td>
+                  <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No inward records found.</td>
                 </tr>
               ) : (
                 filteredInwards.map(i => (
@@ -238,6 +239,19 @@ export function ReportsPage() {
                     <td style={{ fontWeight: '500' }}>{i.from}</td>
                     <td>{(i.items || []).reduce((acc, curr) => acc + curr.qty, 0)}</td>
                     <td>{i.remarks || '-'}</td>
+                    <td>
+                      {i.documentData ? (
+                        <a 
+                          href={i.documentData} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()} // Prevent opening the row modal when clicking the link
+                          style={{ color: 'var(--primary)', textDecoration: 'underline', fontWeight: '500' }}
+                        >
+                          📎 View
+                        </a>
+                      ) : '-'}
+                    </td>
                     <td>
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleDeleteInward(i.id); }} 

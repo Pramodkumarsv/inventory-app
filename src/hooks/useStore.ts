@@ -57,7 +57,8 @@ export function useStore() {
     if (res.ok && contentType && contentType.includes('application/json')) {
       fetchInwards();
     } else {
-      throw new Error('Failed to save inward. Backend not reachable (Are you running "vercel dev"?)');
+      const text = await res.text();
+      throw new Error(`Failed to save inward. Backend responded with: ${text || 'Unknown Error (Are environment variables missing?)'}`);
     }
   };
 
@@ -71,7 +72,8 @@ export function useStore() {
     if (res.ok && contentType && contentType.includes('application/json')) {
       fetchOutwards();
     } else {
-      throw new Error('Failed to save outward. Backend not reachable (Are you running "vercel dev"?)');
+      const text = await res.text();
+      throw new Error(`Failed to save outward. Backend responded with: ${text || 'Unknown Error (Are environment variables missing?)'}`);
     }
   };
 

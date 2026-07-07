@@ -2,12 +2,22 @@ import { prisma } from './lib/db';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL || '', 
-  process.env.VITE_SUPABASE_ANON_KEY || ''
-);
+const getSupabase = () => {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error('Supabase environment variables (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY) are missing in Vercel.');
+  }
+  return createClient(url, key);
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  let supabase;
+  try {
+    supabase = getSupabase();
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Missing authorization header' });
   
