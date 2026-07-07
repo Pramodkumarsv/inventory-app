@@ -5,16 +5,15 @@ import { PrismaPg } from '@prisma/adapter-pg';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-export const prisma =
-  globalForPrisma.prisma ||
-  (function () {
+export const getPrisma = (): PrismaClient => {
+  if (!globalForPrisma.prisma) {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
-      console.warn('DATABASE_URL is not set. Prisma will fail to connect.');
+      throw new Error("DATABASE_URL is missing in environment variables. Please add it in Vercel.");
     }
     const pool = new Pool({ connectionString });
     const adapter = new PrismaPg(pool);
-    return new PrismaClient({ adapter, log: ['query'] });
-  })();
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+    globalForPrisma.prisma = new PrismaClient({ adapter, log: ['query'] });
+  }
+  return globalForPrisma.prisma;
+};

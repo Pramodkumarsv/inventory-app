@@ -1,4 +1,4 @@
-import { prisma } from './lib/db';
+import { getPrisma } from './lib/db';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
@@ -13,8 +13,10 @@ const getSupabase = () => {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   let supabase;
+  let prisma;
   try {
     supabase = getSupabase();
+    prisma = getPrisma();
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
