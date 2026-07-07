@@ -161,7 +161,7 @@ export function OutwardPage() {
     doc.save(`Invoice_${record.customerName}_${Date.now()}.pdf`);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate quantities
@@ -186,21 +186,25 @@ export function OutwardPage() {
       items: items as OutwardItem[] // ignoring ID for creation payload
     };
     
-    addOutward(recordToSave as any);
-    generatePDF(recordToSave as any);
+    try {
+      await addOutward(recordToSave as any);
+      generatePDF(recordToSave as any);
 
-    // Reset Form
-    setFormData({
-      customerName: '',
-      contactNo: '',
-      address: '',
-      projectName: '',
-      from: '',
-      remarks: ''
-    });
-    setItems([{ modelNo: '', productType: '', slNo: '', qty: 1, unitValue: 0 }]);
-    
-    alert('Outward entry added successfully and PDF generated!');
+      // Reset Form
+      setFormData({
+        customerName: '',
+        contactNo: '',
+        address: '',
+        projectName: '',
+        from: '',
+        remarks: ''
+      });
+      setItems([{ modelNo: '', productType: '', slNo: '', qty: 1, unitValue: 0 }]);
+      
+      alert('Outward entry added successfully and PDF generated!');
+    } catch (error: any) {
+      alert(`Error saving outward: ${error.message}`);
+    }
   };
 
   return (

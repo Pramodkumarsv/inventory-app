@@ -145,7 +145,7 @@ export function InwardPage() {
         items: items as InwardItem[]
       };
 
-      addInward(recordToSave as any);
+      await addInward(recordToSave as any);
 
       // Reset
       setFormData({
