@@ -1,6 +1,18 @@
 import { useState, useMemo, useRef } from 'react';
 import { useStore } from '../hooks/useStore';
 import * as XLSX from 'xlsx';
+import { 
+  Search, 
+  Download, 
+  Upload, 
+  Trash2, 
+  Eye, 
+  Package, 
+  ArrowDownToLine, 
+  ArrowUpFromLine,
+  History,
+  X
+} from 'lucide-react';
 
 export function ReportsPage() {
   const { inwards, outwards, addInward, deleteOutward, deleteInward } = useStore();
@@ -19,7 +31,6 @@ export function ReportsPage() {
     );
   }, [inwards, globalSearch]);
 
-  // Calculate available qty by model no
   const availableByModel = useMemo(() => {
     const map: Record<string, { modelNo: string, availableQty: number, productType: string }> = {};
     
@@ -47,7 +58,8 @@ export function ReportsPage() {
     return availableByModel.reduce((acc, curr) => acc + curr.availableQty, 0);
   }, [availableByModel]);
 
-
+  const totalInwardRecords = inwards.length;
+  const totalOutwardRecords = outwards.length;
 
   const filteredAvailable = useMemo(() => {
     const searchLower = globalSearch.toLowerCase();
@@ -83,7 +95,6 @@ export function ReportsPage() {
       const ws = workbook.Sheets[wsname];
       const data = XLSX.utils.sheet_to_json(ws) as any[];
 
-      // Convert rows to Inward Items
       const newItems = data.map(row => ({
         modelNo: row['Model No'] || row['modelNo'] || row['Model'],
         productType: row['Product Type'] || row['productType'] || row['Product'] || 'Imported',
@@ -113,7 +124,6 @@ export function ReportsPage() {
     }
   };
 
-  // Item Details Modal Data
   const getDetailsForModel = (modelNo: string) => {
     const history: any[] = [];
     inwards.forEach(i => {
@@ -141,81 +151,161 @@ export function ReportsPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      
-      <div className="card" style={{ padding: '1.5rem' }}>
-        <input 
-          type="text" 
-          placeholder="Global Search (Model No, Product Type, Customer, Project, Location)..." 
-          className="form-input" 
-          value={globalSearch}
-          onChange={e => setGlobalSearch(e.target.value)}
-          style={{ fontSize: '1.125rem', padding: '1rem', width: '100%', borderColor: 'var(--primary)' }}
-        />
-      </div>
-
-      <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div>
+      <div className="page-header">
         <div>
-          <h2 className="page-title" style={{ marginBottom: '0.5rem' }}>Dashboard Overview</h2>
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-            <button onClick={exportExcel} className="btn btn-primary" style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span>⬇️</span> Export Excel
-            </button>
-            <button onClick={() => fileInputRef.current?.click()} className="btn btn-secondary" style={{ backgroundColor: 'var(--secondary)', color: 'white', fontSize: '0.875rem', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span>⬆️</span> Import Excel
-            </button>
-            <input type="file" ref={fileInputRef} onChange={handleImport} accept=".xlsx, .xls" style={{ display: 'none' }} />
-          </div>
+          <h1 className="page-title">Dashboard Overview</h1>
+          <p className="page-subtitle">Track and manage your inventory operations in real-time.</p>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--secondary)' }}>
-            {totalAvailableQty}
-          </div>
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Total Available Qty</div>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button onClick={exportExcel} className="btn btn-secondary">
+            <Download size={18} /> Export Data
+          </button>
+          <button onClick={() => fileInputRef.current?.click()} className="btn btn-primary">
+            <Upload size={18} /> Import Excel
+          </button>
+          <input type="file" ref={fileInputRef} onChange={handleImport} accept=".xlsx, .xls" style={{ display: 'none' }} />
         </div>
       </div>
 
-      <div className="card">
-        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: '600' }}>Available Quantity By Model No</h3>
-        <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Click on a Model No to view its transaction history.</p>
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Model No</th>
-                <th>Product Type</th>
-                <th>Available Quantity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAvailable.length === 0 ? (
+      <div className="stat-grid">
+        <div className="card stat-card card-hover">
+          <div className="stat-icon"><Package size={24} /></div>
+          <div>
+            <div className="stat-value">{totalAvailableQty}</div>
+            <div className="stat-label">Total Available Units</div>
+          </div>
+        </div>
+        <div className="card stat-card card-hover">
+          <div className="stat-icon success"><ArrowDownToLine size={24} /></div>
+          <div>
+            <div className="stat-value">{totalInwardRecords}</div>
+            <div className="stat-label">Total Inward Logs</div>
+          </div>
+        </div>
+        <div className="card stat-card card-hover">
+          <div className="stat-icon warning"><ArrowUpFromLine size={24} /></div>
+          <div>
+            <div className="stat-value">{totalOutwardRecords}</div>
+            <div className="stat-label">Total Outward Logs</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <Search size={20} color="var(--text-muted)" />
+          <input 
+            type="text" 
+            placeholder="Global Search (Model No, Product Type, Customer, Project, Location)..." 
+            value={globalSearch}
+            onChange={e => setGlobalSearch(e.target.value)}
+            style={{ 
+              background: 'transparent', 
+              border: 'none', 
+              color: 'var(--text-main)', 
+              fontSize: '1.125rem',
+              width: '100%',
+              outline: 'none'
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="grid">
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)' }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Available Inventory</h3>
+            <p className="page-subtitle">Current stock levels by Model No.</p>
+          </div>
+          <div className="table-container" style={{ borderRadius: 0, border: 'none', borderTop: 'none', maxHeight: '400px' }}>
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan={3} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No inventory matches your search.</td>
+                  <th>Model No</th>
+                  <th>Product Type</th>
+                  <th>Available Qty</th>
                 </tr>
-              ) : (
-                filteredAvailable.map(item => (
-                  <tr key={item.modelNo}>
-                    <td>
-                      <button 
-                        onClick={() => setSelectedItem(item.modelNo)}
-                        style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline' }}
-                      >
-                        {item.modelNo}
-                      </button>
-                    </td>
-                    <td>{item.productType}</td>
-                    <td>{item.availableQty}</td>
+              </thead>
+              <tbody>
+                {filteredAvailable.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>No inventory matches your search.</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  filteredAvailable.map(item => (
+                    <tr key={item.modelNo}>
+                      <td>
+                        <button 
+                          onClick={() => setSelectedItem(item.modelNo)}
+                          style={{ 
+                            background: 'transparent', 
+                            border: 'none', 
+                            color: 'var(--primary)', 
+                            fontWeight: 600, 
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                          }}
+                        >
+                          <History size={16} />
+                          {item.modelNo}
+                        </button>
+                      </td>
+                      <td>{item.productType}</td>
+                      <td><span style={{ fontWeight: 600, fontSize: '1.125rem' }}>{item.availableQty}</span></td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)' }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Recent Activity</h3>
+            <p className="page-subtitle">Latest inward & outward logs.</p>
+          </div>
+          <div className="table-container" style={{ borderRadius: 0, border: 'none', borderTop: 'none', maxHeight: '400px' }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Source / Dest</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredInwards.slice(0, 5).map(i => (
+                  <tr key={`in-${i.id}`} style={{ cursor: 'pointer' }} onClick={() => setSelectedRecord({ type: 'INWARD', data: i })}>
+                    <td>{new Date(i.date).toLocaleDateString()}</td>
+                    <td><span className="badge badge-inward">INWARD</span></td>
+                    <td style={{ fontWeight: 500 }}>{i.from}</td>
+                    <td><Eye size={18} color="var(--text-muted)" /></td>
+                  </tr>
+                ))}
+                {outwards.slice(0, 5).map(o => (
+                  <tr key={`out-${o.id}`} style={{ cursor: 'pointer' }} onClick={() => setSelectedRecord({ type: 'OUTWARD', data: o })}>
+                    <td>{new Date(o.date).toLocaleDateString()}</td>
+                    <td><span className="badge badge-outward">OUTWARD</span></td>
+                    <td style={{ fontWeight: 500 }}>{o.customerName}</td>
+                    <td><Eye size={18} color="var(--text-muted)" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <div className="card">
-        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: '600' }}>Recent Inward Records</h3>
-        <div className="table-container">
+      <div className="card" style={{ padding: 0, overflow: 'hidden', marginTop: '2rem' }}>
+        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 600 }}>All Inward Records</h3>
+        </div>
+        <div className="table-container" style={{ borderRadius: 0, border: 'none' }}>
           <table>
             <thead>
               <tr>
@@ -224,40 +314,40 @@ export function ReportsPage() {
                 <th>Total Items</th>
                 <th>Remarks</th>
                 <th>Document</th>
-                <th>Actions</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredInwards.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No inward records found.</td>
+                  <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>No inward records found.</td>
                 </tr>
               ) : (
                 filteredInwards.map(i => (
                   <tr key={i.id} style={{ cursor: 'pointer' }} onClick={() => setSelectedRecord({ type: 'INWARD', data: i })}>
                     <td>{new Date(i.date).toLocaleDateString()}</td>
-                    <td style={{ fontWeight: '500' }}>{i.from}</td>
-                    <td>{(i.items || []).reduce((acc, curr) => acc + curr.qty, 0)}</td>
-                    <td>{i.remarks || '-'}</td>
+                    <td style={{ fontWeight: 500 }}>{i.from}</td>
+                    <td>{(i.items || []).reduce((acc, curr) => acc + curr.qty, 0)} Units</td>
+                    <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{i.remarks || '-'}</td>
                     <td>
                       {i.documentData ? (
                         <a 
                           href={i.documentData} 
                           target="_blank" 
                           rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()} // Prevent opening the row modal when clicking the link
-                          style={{ color: 'var(--primary)', textDecoration: 'underline', fontWeight: '500' }}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.25rem' }}
                         >
-                          📎 View
+                          <Eye size={16} /> View
                         </a>
-                      ) : '-'}
+                      ) : <span style={{ color: 'var(--text-muted)' }}>-</span>}
                     </td>
-                    <td>
+                    <td style={{ textAlign: 'right' }}>
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleDeleteInward(i.id); }} 
-                        style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.875rem' }}
+                        className="btn btn-sm btn-danger"
                       >
-                        Delete
+                        <Trash2 size={16} /> Delete
                       </button>
                     </td>
                   </tr>
@@ -268,11 +358,11 @@ export function ReportsPage() {
         </div>
       </div>
 
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '600' }}>Recent Outward Records</h3>
+      <div className="card" style={{ padding: 0, overflow: 'hidden', marginTop: '2rem' }}>
+        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 600 }}>All Outward Records</h3>
         </div>
-        <div className="table-container">
+        <div className="table-container" style={{ borderRadius: 0, border: 'none' }}>
           <table>
             <thead>
               <tr>
@@ -280,13 +370,13 @@ export function ReportsPage() {
                 <th>Customer Name</th>
                 <th>Project</th>
                 <th>Total Items</th>
-                <th>Actions</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {outwards.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No outward records found.</td>
+                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>No outward records found.</td>
                 </tr>
               ) : (
                 outwards.filter(o => 
@@ -296,15 +386,15 @@ export function ReportsPage() {
                 ).map(o => (
                   <tr key={o.id} style={{ cursor: 'pointer' }} onClick={() => setSelectedRecord({ type: 'OUTWARD', data: o })}>
                     <td>{new Date(o.date).toLocaleDateString()}</td>
-                    <td style={{ fontWeight: '500' }}>{o.customerName}</td>
+                    <td style={{ fontWeight: 500 }}>{o.customerName}</td>
                     <td>{o.projectName || '-'}</td>
-                    <td>{(o.items || []).reduce((acc, curr) => acc + curr.qty, 0)}</td>
-                    <td>
+                    <td>{(o.items || []).reduce((acc, curr) => acc + curr.qty, 0)} Units</td>
+                    <td style={{ textAlign: 'right' }}>
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleDeleteOutward(o.id); }} 
-                        style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.875rem' }}
+                        className="btn btn-sm btn-danger"
                       >
-                        Delete
+                        <Trash2 size={16} /> Delete
                       </button>
                     </td>
                   </tr>
@@ -317,14 +407,19 @@ export function ReportsPage() {
 
       {/* Item Details Modal */}
       {selectedItem && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div className="card" style={{ width: '90%', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>History: {selectedItem}</h2>
-              <button onClick={() => setSelectedItem(null)} style={{ background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-muted)' }}>×</button>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '1rem' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto', padding: 0 }}>
+            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Model History</h2>
+                <p className="page-subtitle" style={{ color: 'var(--primary)', fontWeight: 600 }}>{selectedItem}</p>
+              </div>
+              <button onClick={() => setSelectedItem(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                <X size={24} />
+              </button>
             </div>
             
-            <div className="table-container">
+            <div className="table-container" style={{ borderRadius: 0, border: 'none' }}>
               <table>
                 <thead>
                   <tr>
@@ -332,22 +427,26 @@ export function ReportsPage() {
                     <th>Type</th>
                     <th>Qty</th>
                     <th>Location / Customer</th>
-                    <th>Actions</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {getDetailsForModel(selectedItem).map((entry, idx) => (
                     <tr key={idx}>
                       <td>{new Date(entry.date).toLocaleDateString()}</td>
-                      <td style={{ color: entry.type === 'INWARD' ? 'var(--secondary)' : 'var(--danger)', fontWeight: 'bold' }}>{entry.type}</td>
-                      <td>{entry.qty}</td>
-                      <td>{entry.fromTo}</td>
                       <td>
+                        <span className={`badge ${entry.type === 'INWARD' ? 'badge-inward' : 'badge-outward'}`}>
+                          {entry.type}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: 600 }}>{entry.qty}</td>
+                      <td>{entry.fromTo}</td>
+                      <td style={{ textAlign: 'right' }}>
                         <button 
                           onClick={() => entry.type === 'INWARD' ? handleDeleteInward(entry.id) : handleDeleteOutward(entry.id)} 
-                          style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline' }}
+                          style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.875rem' }}
                         >
-                          Delete Record
+                          <Trash2 size={16} />
                         </button>
                       </td>
                     </tr>
@@ -361,98 +460,107 @@ export function ReportsPage() {
 
       {/* Full Details Modal for Inward/Outward Records */}
       {selectedRecord && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '1rem' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)' }}>
-                {selectedRecord.type === 'INWARD' ? 'Inward Receipt Details' : 'Outward Invoice Details'}
-              </h2>
-              <button onClick={() => setSelectedRecord(null)} style={{ background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-muted)' }}>×</button>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '1rem' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', padding: 0 }}>
+            
+            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary)' }}>
+                  {selectedRecord.type === 'INWARD' ? 'Inward Receipt' : 'Outward Invoice'} Details
+                </h2>
+                <p className="page-subtitle">ID: {selectedRecord.data.id}</p>
+              </div>
+              <button onClick={() => setSelectedRecord(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                <X size={24} />
+              </button>
             </div>
             
-            <div className="grid grid-cols-2" style={{ marginBottom: '2rem', gap: '1rem' }}>
-              <div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Date</p>
-                <p style={{ fontWeight: '500' }}>{new Date(selectedRecord.data.date).toLocaleDateString()}</p>
-              </div>
-              {selectedRecord.type === 'INWARD' ? (
-                <>
-                  <div>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>From (Vendor)</p>
-                    <p style={{ fontWeight: '500' }}>{selectedRecord.data.from}</p>
-                  </div>
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Remarks</p>
-                    <p style={{ fontWeight: '500' }}>{selectedRecord.data.remarks || '-'}</p>
-                  </div>
-                  {selectedRecord.data.documentData && (
-                    <div style={{ gridColumn: 'span 2', marginTop: '1rem' }}>
-                      <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Captured Photo / Document</p>
-                      <a href={selectedRecord.data.documentData} target="_blank" rel="noreferrer">
-                        <img src={selectedRecord.data.documentData} alt="Document" style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '0.5rem', border: '1px solid var(--border)' }} />
-                      </a>
+            <div style={{ padding: '2rem' }}>
+              <div className="grid grid-cols-2" style={{ marginBottom: '2.5rem', gap: '1.5rem' }}>
+                <div>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Date</p>
+                  <p style={{ fontWeight: 500, fontSize: '1.125rem' }}>{new Date(selectedRecord.data.date).toLocaleDateString()}</p>
+                </div>
+                {selectedRecord.type === 'INWARD' ? (
+                  <>
+                    <div>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>From (Vendor)</p>
+                      <p style={{ fontWeight: 500, fontSize: '1.125rem' }}>{selectedRecord.data.from}</p>
                     </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Customer Name</p>
-                    <p style={{ fontWeight: '500' }}>{selectedRecord.data.customerName}</p>
-                  </div>
-                  <div>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Contact No</p>
-                    <p style={{ fontWeight: '500' }}>{selectedRecord.data.contactNo}</p>
-                  </div>
-                  <div>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Project Name</p>
-                    <p style={{ fontWeight: '500' }}>{selectedRecord.data.projectName || '-'}</p>
-                  </div>
-                  <div>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Dispatched From</p>
-                    <p style={{ fontWeight: '500' }}>{selectedRecord.data.from}</p>
-                  </div>
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Address</p>
-                    <p style={{ fontWeight: '500' }}>{selectedRecord.data.address}</p>
-                  </div>
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Remarks</p>
-                    <p style={{ fontWeight: '500' }}>{selectedRecord.data.remarks || '-'}</p>
-                  </div>
-                </>
-              )}
-            </div>
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Remarks</p>
+                      <p style={{ fontWeight: 500, background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.5rem' }}>{selectedRecord.data.remarks || '-'}</p>
+                    </div>
+                    {selectedRecord.data.documentData && (
+                      <div style={{ gridColumn: 'span 2', marginTop: '0.5rem' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.75rem' }}>Captured Photo / Document</p>
+                        <a href={selectedRecord.data.documentData} target="_blank" rel="noreferrer" style={{ display: 'block', borderRadius: '0.75rem', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                          <img src={selectedRecord.data.documentData} alt="Document" style={{ width: '100%', maxHeight: '400px', objectFit: 'contain', background: 'var(--bg-main)' }} />
+                        </a>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Customer Name</p>
+                      <p style={{ fontWeight: 500, fontSize: '1.125rem' }}>{selectedRecord.data.customerName}</p>
+                    </div>
+                    <div>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Contact No</p>
+                      <p style={{ fontWeight: 500, fontSize: '1.125rem' }}>{selectedRecord.data.contactNo}</p>
+                    </div>
+                    <div>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Project Name</p>
+                      <p style={{ fontWeight: 500, fontSize: '1.125rem' }}>{selectedRecord.data.projectName || '-'}</p>
+                    </div>
+                    <div>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Dispatched From</p>
+                      <p style={{ fontWeight: 500, fontSize: '1.125rem' }}>{selectedRecord.data.from}</p>
+                    </div>
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Address</p>
+                      <p style={{ fontWeight: 500, background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.5rem' }}>{selectedRecord.data.address}</p>
+                    </div>
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Remarks</p>
+                      <p style={{ fontWeight: 500, background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.5rem' }}>{selectedRecord.data.remarks || '-'}</p>
+                    </div>
+                  </>
+                )}
+              </div>
 
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>Items Scanned</h3>
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Model No</th>
-                    <th>Product Type</th>
-                    <th>Serial No</th>
-                    <th>Qty</th>
-                    <th>Unit Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(selectedRecord.data.items || []).map((item: any, idx: number) => (
-                    <tr key={idx}>
-                      <td style={{ fontWeight: '500' }}>{item.modelNo}</td>
-                      <td>{item.productType}</td>
-                      <td>{item.slNo || '-'}</td>
-                      <td>{item.qty}</td>
-                      <td>{item.unitValue || 0}</td>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 600, margin: '2rem 0 1rem' }}>Items Transacted</h3>
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Model No</th>
+                      <th>Product Type</th>
+                      <th>Serial No</th>
+                      <th>Qty</th>
+                      {selectedRecord.type === 'OUTWARD' && <th>Unit Value</th>}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {(selectedRecord.data.items || []).map((item: any, idx: number) => (
+                      <tr key={idx}>
+                        <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{item.modelNo}</td>
+                        <td>{item.productType}</td>
+                        <td style={{ fontFamily: 'monospace' }}>{item.slNo || '-'}</td>
+                        <td style={{ fontWeight: 600 }}>{item.qty}</td>
+                        {selectedRecord.type === 'OUTWARD' && <td>${item.unitValue || 0}</td>}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-
-            <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
-              <button onClick={() => setSelectedRecord(null)} className="btn btn-secondary">Close Details</button>
+            
+            <div style={{ padding: '1.5rem', borderTop: '1px solid var(--border)', background: 'var(--bg-input)', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setSelectedRecord(null)} className="btn btn-secondary">Close Window</button>
             </div>
+            
           </div>
         </div>
       )}

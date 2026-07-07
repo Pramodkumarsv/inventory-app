@@ -1,6 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { 
+  LayoutDashboard, 
+  ArrowDownToLine, 
+  ArrowUpFromLine, 
+  LogOut, 
+  Sun, 
+  Moon,
+  Menu,
+  X,
+  Package
+} from 'lucide-react';
 
 export function Sidebar() {
   const location = useLocation();
@@ -17,54 +28,73 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="sidebar">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div className="sidebar-logo" style={{ marginBottom: 0 }}>
-          Inventory Pro
-        </div>
-        <button 
-          className="mobile-menu-btn btn"
-          style={{ display: 'none', background: 'transparent', color: 'var(--text-main)', fontSize: '1.5rem', padding: '0.5rem' }}
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          ☰
-        </button>
+    <>
+      {/* Mobile Header */}
+      <div className="mobile-header" style={{ display: 'none' /* handled by media query in css ideally, but let's do inline for specific mobile overrides if needed */ }}>
+        {/* We can use CSS to show this only on mobile, but let's keep it simple with standard classes */}
       </div>
 
-      <nav className="sidebar-nav" style={{ display: isMobileMenuOpen ? 'flex' : '' }} id="nav-menu">
-        <Link 
-          to="/" 
-          className={`nav-item ${location.pathname === '/' ? 'active' : ''}`}
-          onClick={() => setIsMobileMenuOpen(false)}
-        >
-          Dashboard / Reports
-        </Link>
-        <Link 
-          to="/inward" 
-          className={`nav-item ${location.pathname === '/inward' ? 'active' : ''}`}
-          onClick={() => setIsMobileMenuOpen(false)}
-        >
-          Inward Entry
-        </Link>
-        <Link 
-          to="/outward" 
-          className={`nav-item ${location.pathname === '/outward' ? 'active' : ''}`}
-          onClick={() => setIsMobileMenuOpen(false)}
-        >
-          Outward Entry
-        </Link>
-      </nav>
-      
-      <div style={{ marginTop: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }} className="sidebar-footer">
-        <button 
-          onClick={toggleTheme} 
-          className="btn btn-secondary" 
-          style={{ width: '100%', padding: '0.75rem', fontSize: '0.875rem', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border)' }}
-        >
-          {theme === 'dark' ? '☀️ Switch to Light' : '🌙 Switch to Dark'}
-        </button>
-        <button onClick={() => supabase.auth.signOut()} className="btn btn-primary" style={{ width: '100%', padding: '0.75rem', fontSize: '0.875rem', backgroundColor: 'var(--danger)' }}>Logout</button>
-      </div>
-    </aside>
+      <aside className="sidebar">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="sidebar-logo">
+            <Package size={28} color="var(--primary)" />
+            Inventory Pro
+          </div>
+          <button 
+            className="mobile-menu-btn"
+            style={{ display: 'none', background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer' }}
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+
+        <nav className="sidebar-nav" style={{ display: isMobileMenuOpen ? 'flex' : '' }} id="nav-menu">
+          <Link 
+            to="/" 
+            className={`nav-item ${location.pathname === '/' ? 'active' : ''}`}
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <LayoutDashboard />
+            Dashboard
+          </Link>
+          <Link 
+            to="/inward" 
+            className={`nav-item ${location.pathname === '/inward' ? 'active' : ''}`}
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <ArrowDownToLine />
+            Inward Entry
+          </Link>
+          <Link 
+            to="/outward" 
+            className={`nav-item ${location.pathname === '/outward' ? 'active' : ''}`}
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <ArrowUpFromLine />
+            Outward Entry
+          </Link>
+        </nav>
+        
+        <div className="sidebar-footer" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <button 
+            onClick={toggleTheme} 
+            className="nav-item" 
+            style={{ width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--text-muted)' }}
+          >
+            {theme === 'dark' ? <><Sun /> Light Mode</> : <><Moon /> Dark Mode</>}
+          </button>
+          
+          <button 
+            onClick={() => supabase.auth.signOut()} 
+            className="nav-item" 
+            style={{ width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--danger)' }}
+          >
+            <LogOut />
+            Logout
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }
